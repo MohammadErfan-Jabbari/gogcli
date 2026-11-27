@@ -1,0 +1,110 @@
+name: oikos
+description: >-
+  The eight Google apps Erfan uses, minus sending mail or messages, deleting,
+  changing sharing, and signing in. Built for his Oikos bot on epix
+  (MohammadErfan-Jabbari/oikos#23). Calendar events with guests still notify
+  the guests, and Drive moves, copies, and uploads into a shared folder are
+  visible to that folder's members.
+
+# Everything not listed here is blocked, including root shortcuts such as
+# `send`, `login`, and `logout`, and services Oikos does not use.
+allow:
+  - gmail
+  - calendar
+  - drive
+  - docs
+  - sheets
+  - slides
+  - contacts
+  - tasks
+  - auth.list
+  - auth.status
+  - auth.doctor
+  - auth.services
+  - schema
+  - version
+
+deny:
+  # Sending mail or messages, now or later. Comments email the people on a file.
+  - gmail.send
+  - gmail.reply
+  - gmail.reply-all
+  - gmail.forward
+  - gmail.autoreply
+  - gmail.drafts.send
+  - gmail.track
+  - gmail.settings.vacation.update
+  - gmail.settings.autoforward.update
+  - gmail.settings.forwarding.create
+  - gmail.settings.filters.create
+  - gmail.settings.sendas.create
+  - gmail.settings.sendas.update
+  - gmail.settings.sendas.verify
+  - calendar.out-of-office
+  - calendar.focus-time
+  - calendar.propose-time
+  - drive.comments.create
+  - drive.comments.update
+  - drive.comments.reply
+  - drive.comments.resolve
+  - drive.comments.reopen
+  - docs.comments.add
+  - docs.comments.reply
+  - docs.comments.resolve
+  - docs.comments.reopen
+
+  # Deleting. Adding the TRASH or SPAM label is refused in code while
+  # gmail.trash is denied.
+  - gmail.trash
+  - gmail.batch.delete
+  - gmail.drafts.delete
+  - gmail.labels.delete
+  - gmail.settings.filters.delete
+  - gmail.settings.forwarding.delete
+  - gmail.settings.sendas.delete
+  - calendar.delete
+  - calendar.delete-calendar
+  - contacts.delete
+  - contacts.batch.delete
+  - contacts.dedupe
+  - drive.delete
+  - drive.comments.delete
+  - docs.clear
+  - docs.delete-tab
+  - docs.tabs.delete
+  - docs.comments.delete
+  - sheets.clear
+  - sheets.delete-tab
+  - slides.delete-slide
+  - tasks.delete
+  - tasks.clear
+
+  # Sharing, sending data to another server, or running a local command.
+  - drive.share
+  - drive.unshare
+  - drive.bulk.remove-public
+  - drive.bulk.update-role
+  - drive.changes.watch
+  - drive.changes.serve
+  - gmail.settings.delegates.add
+  - gmail.settings.delegates.remove
+  - gmail.settings.watch
+  - drive.changes.poll
+
+  # Hidden second mounts of the gmail settings groups. Their paths are
+  # gmail.<group>, so the gmail.settings.* rules above do not match them.
+  - gmail.autoforward
+  - gmail.delegates
+  - gmail.filters
+  - gmail.forwarding
+  - gmail.sendas
+  - gmail.vacation
+  - gmail.watch
+
+  # gog's own configuration file.
+  - calendar.alias.set
+  - calendar.alias.unset
+
+locked-flags:
+  no-input: true
+  wrap-untrusted: true

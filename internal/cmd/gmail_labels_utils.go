@@ -202,3 +202,25 @@ func labelDuplicateReason(reason string) bool {
 		return false
 	}
 }
+
+// refuseTrashLabelsUnderProfile stops a label change from doing what a baked
+// profile forbids as a command: adding TRASH is gmail trash, and SPAM leads to
+// the same deletion after 30 days.
+func refuseTrashLabelsUnderProfile(addLabels []string) error {
+	profile, err := loadBakedSafetyProfile()
+	if err != nil {
+		return err
+	}
+	if !profile.enabled || profile.allowsCommandPath([]string{"gmail", "trash"}) {
+		return nil
+	}
+	for _, label := range addLabels {
+		for _, part := range strings.Split(label, ",") {
+			switch strings.ToUpper(strings.TrimSpace(part)) {
+			case "TRASH", "SPAM":
+				return usagef("adding label %s is blocked by baked safety profile %q, which blocks gmail trash", strings.ToUpper(strings.TrimSpace(part)), profile.name)
+			}
+		}
+	}
+	return nil
+}

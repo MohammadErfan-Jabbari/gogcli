@@ -73,6 +73,9 @@ func prepareSlidesImageURL(ctx context.Context, account string, source slidesIma
 	if err != nil {
 		return "", nil, err
 	}
+	if err := refusePublicShareUnderProfile(source.localPath); err != nil {
+		return "", nil, err
+	}
 	imgFile, err := os.Open(source.localPath)
 	if err != nil {
 		return "", nil, fmt.Errorf("open image: %w", err)

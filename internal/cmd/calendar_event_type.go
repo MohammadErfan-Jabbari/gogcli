@@ -159,3 +159,26 @@ func resolveFilterEventTypes(raw []string) ([]string, error) {
 	}
 	return out, nil
 }
+
+// refuseAutoDeclineUnderProfile stops calendar create and update from making
+// what a baked profile forbids as a command: out-of-office and focus-time
+// events decline other people's invitations and send them a message.
+func refuseAutoDeclineUnderProfile(eventType, focusAutoDecline, focusDeclineMessage, focusChatStatus, oooAutoDecline, oooDeclineMessage string) error {
+	profile, err := loadBakedSafetyProfile()
+	if err != nil {
+		return err
+	}
+	if !profile.enabled {
+		return nil
+	}
+	canonical := eventTypeAliases[strings.TrimSpace(strings.ToLower(eventType))]
+	if !profile.allowsCommandPath([]string{"calendar", "out-of-office"}) &&
+		(canonical == eventTypeOutOfOffice || strings.TrimSpace(oooAutoDecline) != "" || strings.TrimSpace(oooDeclineMessage) != "") {
+		return usagef("out-of-office events are blocked by baked safety profile %q, which blocks calendar out-of-office", profile.name)
+	}
+	if !profile.allowsCommandPath([]string{"calendar", "focus-time"}) &&
+		(canonical == eventTypeFocusTime || strings.TrimSpace(focusAutoDecline) != "" || strings.TrimSpace(focusDeclineMessage) != "" || strings.TrimSpace(focusChatStatus) != "") {
+		return usagef("focus-time events are blocked by baked safety profile %q, which blocks calendar focus-time", profile.name)
+	}
+	return nil
+}

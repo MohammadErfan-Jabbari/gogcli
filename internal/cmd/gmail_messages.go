@@ -216,6 +216,10 @@ func (c *GmailMessagesModifyCmd) Run(ctx context.Context, flags *RootFlags) erro
 		return usage("must specify --add and/or --remove")
 	}
 
+	if err := refuseTrashLabelsUnderProfile(addLabels); err != nil {
+		return err
+	}
+
 	if err := dryRunExit(ctx, flags, "gmail.messages.modify", map[string]any{
 		"message_id": messageID,
 		"add":        addLabels,
