@@ -104,6 +104,9 @@ func (c *DocsInsertImageCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return dryRunErr
 	}
 	if source.imageURL == "" {
+		if err := refusePublicShareUnderProfile(source.name); err != nil {
+			return err
+		}
 		if confirmErr := confirmDestructiveChecked(ctx, flagsWithoutDryRun(flags), fmt.Sprintf("temporarily share uploaded image %s with anyone (public) so Google Docs can fetch it", source.name)); confirmErr != nil {
 			return confirmErr
 		}

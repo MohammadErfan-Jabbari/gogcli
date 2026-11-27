@@ -79,7 +79,7 @@ deny:
   - tasks.delete
   - tasks.clear
 
-  # Sharing, or sending data to another server.
+  # Sharing, sending data to another server, or running a local command.
   - drive.share
   - drive.unshare
   - drive.bulk.remove-public
@@ -88,9 +88,22 @@ deny:
   - drive.changes.serve
   - gmail.settings.delegates.add
   - gmail.settings.delegates.remove
-  - gmail.settings.watch.start
-  - gmail.settings.watch.serve
-  - gmail.settings.watch.renew
+  - gmail.settings.watch
+  - drive.changes.poll
+
+  # Hidden second mounts of the gmail settings groups. Their paths are
+  # gmail.<group>, so the gmail.settings.* rules above do not match them.
+  - gmail.autoforward
+  - gmail.delegates
+  - gmail.filters
+  - gmail.forwarding
+  - gmail.sendas
+  - gmail.vacation
+  - gmail.watch
+
+  # gog's own configuration file.
+  - calendar.alias.set
+  - calendar.alias.unset
 
 locked-flags:
   no-input: true

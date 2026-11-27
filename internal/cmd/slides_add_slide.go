@@ -81,6 +81,9 @@ func (c *SlidesAddSlideCmd) Run(ctx context.Context, flags *RootFlags) error {
 		return err
 	}
 
+	if err := refusePublicShareUnderProfile(c.Image); err != nil {
+		return err
+	}
 	// Upload image to Drive as a temporary file
 	imgFile, err := os.Open(c.Image)
 	if err != nil {

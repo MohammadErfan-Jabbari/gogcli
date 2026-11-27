@@ -388,6 +388,9 @@ type DriveUploader struct {
 }
 
 func (d *DriveUploader) UploadAsset(ctx context.Context, name, mime string, body []byte) (ImageRef, error) {
+	if err := refusePublicShareUnderProfile(name); err != nil {
+		return ImageRef{}, err
+	}
 	created, err := d.Svc.Files.Create(&drive.File{
 		Name:     name,
 		MimeType: mime,

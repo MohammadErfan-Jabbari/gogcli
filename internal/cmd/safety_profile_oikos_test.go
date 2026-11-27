@@ -9,9 +9,9 @@ import (
 	"testing"
 )
 
-// The oikos profile allows everything except sending, deleting, sharing, and
-// signing in. It is deny-only, so a command added upstream is allowed by
-// default. This test fails when a new command looks like one of those four
+// The oikos profile allows eight Google apps except sending, deleting,
+// sharing, and signing in. A command added upstream inside one of those apps
+// is allowed by default. This test fails when a new command looks like one of those four
 // and the profile has not decided on it, so an upstream sync stops for review.
 var oikosRiskyLeaf = regexp.MustCompile(`(send|delete|trash|clear|share|forward|reply|publish|watch|import|export|remove|rekey|keyring|dedupe|vacation|delegates|sendas|update-role|autoforward|tokens|credentials|unset|^set$|-set$|modify|move|copy|serve|renew|run|push|login|logout|react|return|suspend|^end$|unsubscribe|resolve|reopen|out-of-office|focus-time|propose-time|respond|upload|sync)`)
 
@@ -20,6 +20,7 @@ var oikosRiskyLeaf = regexp.MustCompile(`(send|delete|trash|clear|share|forward|
 // changes (TRASH and SPAM are refused in code), and moves, copies, and
 // uploads, which become visible when the target folder is shared.
 var oikosReviewedAllow = map[string]bool{
+	"gmail.settings.filters.export":   true,
 	"calendar.move":                   true,
 	"calendar.respond":                true,
 	"calendar.unsubscribe":            true,
@@ -36,8 +37,6 @@ var oikosReviewedAllow = map[string]bool{
 	"sheets.copy-paste":               true,
 	"slides.copy":                     true,
 	"slides.move-slide":               true,
-	"calendar.alias.set":              true,
-	"calendar.alias.unset":            true,
 	"contacts.export":                 true,
 	"docs.delete":                     true,
 	"docs.export":                     true,
@@ -51,7 +50,6 @@ var oikosReviewedAllow = map[string]bool{
 	"gmail.drafts.reply":              true,
 	"gmail.drafts.reply-all":          true,
 	"gmail.import":                    true,
-	"gmail.settings.filters.export":   true,
 	"sheets.banding.clear":            true,
 	"sheets.banding.set":              true,
 	"sheets.chart.delete":             true,
@@ -88,7 +86,7 @@ func stockCommandTree(t *testing.T) map[string]*schemaNode {
 	t.Helper()
 	out := captureStdout(t, func() {
 		_ = captureStderr(t, func() {
-			if err := Execute([]string{"schema"}); err != nil {
+			if err := Execute([]string{"schema", "--include-hidden"}); err != nil {
 				t.Fatalf("Execute(schema): %v", err)
 			}
 		})
@@ -228,4 +226,63 @@ func TestOikosProfileRefusesTrashThroughLabels(t *testing.T) {
 			}
 		})
 	})
+}
+
+func TestOikosProfileRefusesAutoDecliningEvents(t *testing.T) {
+	setTestConfigHome(t)
+	_, _ = loadOikosProfile(t)
+
+	refused := [][]string{
+		{"--dry-run", "calendar", "create", "primary", "--from", "2026-12-01T10:00:00Z", "--to", "2026-12-01T11:00:00Z", "--event-type", "out-of-office"},
+		{"--dry-run", "calendar", "create", "primary", "--from", "2026-12-01T10:00:00Z", "--to", "2026-12-01T11:00:00Z", "--event-type", "ooo", "--ooo-auto-decline", "none"},
+		{"--dry-run", "calendar", "create", "primary", "--from", "2026-12-01T10:00:00Z", "--to", "2026-12-01T11:00:00Z", "--event-type", "focus-time"},
+		{"--dry-run", "calendar", "create", "primary", "--from", "2026-12-01T10:00:00Z", "--to", "2026-12-01T11:00:00Z", "--focus-auto-decline", "all"},
+		{"--dry-run", "calendar", "update", "primary", "e1", "--ooo-auto-decline", "all"},
+		{"--dry-run", "calendar", "update", "primary", "e1", "--focus-decline-message", "busy"},
+		{"--dry-run", "calendar", "create", "primary", "--from", "2026-12-01T10:00:00Z", "--to", "2026-12-01T11:00:00Z", "--focus-chat-status", "doNotDisturb"},
+	}
+	for _, args := range refused {
+		err := Execute(args)
+		if err == nil || !strings.Contains(err.Error(), "baked safety profile") {
+			t.Errorf("expected auto-decline refusal for %v, got %v", args, err)
+		}
+	}
+	_ = captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := Execute([]string{"--dry-run", "calendar", "create", "primary", "--summary", "gym", "--from", "2026-12-01T10:00:00Z", "--to", "2026-12-01T11:00:00Z"}); err != nil {
+				t.Errorf("ordinary event refused: %v", err)
+			}
+		})
+	})
+}
+
+func TestOikosProfileRefusesTemporaryPublicImages(t *testing.T) {
+	setTestConfigHome(t)
+	_, _ = loadOikosProfile(t)
+	err := refusePublicShareUnderProfile("image.png")
+	if err == nil || !strings.Contains(err.Error(), "baked safety profile") {
+		t.Fatalf("expected public-share refusal, got %v", err)
+	}
+}
+
+// A command group mounted twice must get the same decision under both paths.
+func TestOikosProfileTreatsGmailSettingsMountsAlike(t *testing.T) {
+	setTestConfigHome(t)
+	tree := stockCommandTree(t)
+	profile, _ := loadOikosProfile(t)
+	for path := range tree {
+		rest, ok := strings.CutPrefix(path, "gmail.settings.")
+		if !ok {
+			continue
+		}
+		mirror := "gmail." + rest
+		if tree[mirror] == nil {
+			continue
+		}
+		settings := profile.allowsCommandPath(strings.Split(path, "."))
+		hidden := profile.allowsCommandPath(strings.Split(mirror, "."))
+		if hidden && !settings {
+			t.Errorf("%s is blocked but its hidden mount %s is allowed", path, mirror)
+		}
+	}
 }

@@ -402,3 +402,17 @@ func driveWebLink(ctx context.Context, svc *drive.Service, fileID string) (strin
 	}
 	return fmt.Sprintf("https://drive.google.com/file/d/%s/view", fileID), nil
 }
+
+// refusePublicShareUnderProfile stops commands that upload a local image and
+// share it with anyone so a Google API can fetch it. A baked profile that
+// denies drive share forbids that public link too.
+func refusePublicShareUnderProfile(name string) error {
+	profile, err := loadBakedSafetyProfile()
+	if err != nil {
+		return err
+	}
+	if !profile.enabled || profile.allowsCommandPath([]string{"drive", "share"}) {
+		return nil
+	}
+	return usagef("sharing %s with anyone is blocked by baked safety profile %q, which blocks drive share; pass a public --url instead", name, profile.name)
+}

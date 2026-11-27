@@ -127,6 +127,9 @@ func calendarCreateInputFromCommand(c *CalendarCreateCmd) calendarCreateInput {
 
 func (c *CalendarCreateCmd) Run(ctx context.Context, flags *RootFlags, kctx *kong.Context) error {
 	ctx = withZoomIncludePasswords(ctx, c.IncludePasswords)
+	if err := refuseAutoDeclineUnderProfile(c.EventType, c.FocusAutoDecline, c.FocusDeclineMessage, c.FocusChatStatus, c.OOOAutoDecline, c.OOODeclineMessage); err != nil {
+		return err
+	}
 	fields := calendarCreateFieldsFromKong(kctx)
 	store, err := commandConfigStore(ctx)
 	if err != nil {
@@ -328,6 +331,9 @@ func calendarUpdateInputFromCommand(c *CalendarUpdateCmd) calendarUpdateInput {
 
 func (c *CalendarUpdateCmd) Run(ctx context.Context, kctx *kong.Context, flags *RootFlags) error {
 	ctx = withZoomIncludePasswords(ctx, c.IncludePasswords)
+	if err := refuseAutoDeclineUnderProfile(c.EventType, c.FocusAutoDecline, c.FocusDeclineMessage, c.FocusChatStatus, c.OOOAutoDecline, c.OOODeclineMessage); err != nil {
+		return err
+	}
 	fields := calendarUpdateFieldsFromKong(kctx)
 	store, err := commandConfigStore(ctx)
 	if err != nil {
