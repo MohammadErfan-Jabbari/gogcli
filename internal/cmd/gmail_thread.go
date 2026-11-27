@@ -199,6 +199,10 @@ func (c *GmailThreadModifyCmd) Run(ctx context.Context, flags *RootFlags) error 
 		return usage("must specify --add and/or --remove (or literal --add-label/--remove-label)")
 	}
 
+	if err := refuseTrashLabelsUnderProfile(addLabels); err != nil {
+		return err
+	}
+
 	if err := dryRunExit(ctx, flags, "gmail.thread.modify", map[string]any{
 		"thread_id": threadID,
 		"add":       addLabels,

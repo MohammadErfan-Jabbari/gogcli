@@ -13,15 +13,32 @@ import (
 // signing in. It is deny-only, so a command added upstream is allowed by
 // default. This test fails when a new command looks like one of those four
 // and the profile has not decided on it, so an upstream sync stops for review.
-var oikosRiskyLeaf = regexp.MustCompile(`(send|delete|trash|clear|share|forward|reply|publish|watch|import|export|remove|rekey|keyring|dedupe|vacation|delegates|sendas|update-role|autoforward|tokens|credentials|unset|^set$|-set$)`)
+var oikosRiskyLeaf = regexp.MustCompile(`(send|delete|trash|clear|share|forward|reply|publish|watch|import|export|remove|rekey|keyring|dedupe|vacation|delegates|sendas|update-role|autoforward|tokens|credentials|unset|^set$|-set$|modify|move|copy|serve|renew|run|push|login|logout|react|return|suspend|^end$|unsubscribe|resolve|reopen|out-of-office|focus-time|propose-time|respond|upload|sync)`)
 
 // Reviewed and allowed: drafts, edits inside one document that its version
-// history can undo, exports to a local file, and local configuration.
+// history can undo, exports to a local file, local configuration, label
+// changes (TRASH and SPAM are refused in code), and moves, copies, and
+// uploads, which become visible when the target folder is shared.
 var oikosReviewedAllow = map[string]bool{
+	"calendar.move":                   true,
+	"calendar.respond":                true,
+	"calendar.unsubscribe":            true,
+	"docs.copy":                       true,
+	"drive.copy":                      true,
+	"drive.move":                      true,
+	"drive.sync.push":                 true,
+	"drive.upload":                    true,
+	"gmail.batch.modify":              true,
+	"gmail.labels.modify":             true,
+	"gmail.messages.modify":           true,
+	"gmail.thread.modify":             true,
+	"sheets.copy":                     true,
+	"sheets.copy-paste":               true,
+	"slides.copy":                     true,
+	"slides.move-slide":               true,
 	"calendar.alias.set":              true,
 	"calendar.alias.unset":            true,
 	"contacts.export":                 true,
-	"docs.comments.reply":             true,
 	"docs.delete":                     true,
 	"docs.export":                     true,
 	"docs.footer.delete":              true,
@@ -29,9 +46,7 @@ var oikosReviewedAllow = map[string]bool{
 	"docs.named-range.delete":         true,
 	"docs.table-column.delete":        true,
 	"docs.table-row.delete":           true,
-	"drive.comments.reply":            true,
 	"drive.labels.file.remove":        true,
-	"forms.watch.delete":              true,
 	"gmail.drafts.forward":            true,
 	"gmail.drafts.reply":              true,
 	"gmail.drafts.reply-all":          true,
@@ -107,8 +122,13 @@ func loadOikosProfile(t *testing.T) (bakedSafetyProfile, []string) {
 		t.Fatalf("loadBakedSafetyProfile: %v", err)
 	}
 	var denies []string
+	inDeny := false
 	for _, line := range strings.Split(string(raw), "\n") {
-		if rule, ok := strings.CutPrefix(strings.TrimSpace(line), "- "); ok {
+		if !strings.HasPrefix(line, " ") && strings.HasSuffix(line, ":") {
+			inDeny = line == "deny:"
+			continue
+		}
+		if rule, ok := strings.CutPrefix(strings.TrimSpace(line), "- "); ok && inDeny {
 			denies = append(denies, rule)
 		}
 	}
@@ -126,12 +146,6 @@ func TestOikosProfileDecidesEveryRiskyCommand(t *testing.T) {
 		}
 	}
 	for path, node := range tree {
-		root := strings.SplitN(path, ".", 2)[0]
-		switch root {
-		case "gmail", "calendar", "drive", "docs", "sheets", "slides", "contacts", "tasks", "people", "auth", "config", "chat", "forms":
-		default:
-			continue
-		}
 		parts := strings.Split(path, ".")
 		if len(node.Subcommands) > 0 || !oikosRiskyLeaf.MatchString(parts[len(parts)-1]) {
 			continue
@@ -160,6 +174,17 @@ func TestOikosProfileBlocksSendDeleteShareAndSignIn(t *testing.T) {
 		{"drive", "share", "file-1", "--email", "a@example.com"},
 		{"auth", "tokens", "export", "a@example.com"},
 		{"--enable-commands", "gmail.send", "gmail", "send", "--to", "a@example.com", "--subject", "s", "--body", "b"},
+		{"--dry-run", "send", "--to", "a@example.com", "--subject", "s", "--body", "b"},
+		{"login", "a@example.com"},
+		{"logout", "a@example.com", "-y"},
+		{"--dry-run", "keep", "delete", "note-1"},
+		{"backup", "push"},
+		{"appscript", "run", "script-1", "fn"},
+		{"drive", "changes", "serve", "--webhook-url", "https://example.com/hook", "--state-file", "/tmp/x"},
+		{"--dry-run", "drive", "comments", "create", "file-1", "hi"},
+		{"--dry-run", "calendar", "out-of-office", "primary", "--from", "today", "--to", "tomorrow"},
+		{"zoom", "auth", "setup"},
+		{"youtube", "playlists", "delete", "p1"},
 	}
 	for _, args := range tests {
 		err := Execute(args)
@@ -177,4 +202,30 @@ func TestOikosProfileAllowsEverydayWrites(t *testing.T) {
 			t.Errorf("oikos profile blocks %s", strings.Join(path, " "))
 		}
 	}
+}
+
+func TestOikosProfileRefusesTrashThroughLabels(t *testing.T) {
+	setTestConfigHome(t)
+	_, _ = loadOikosProfile(t)
+
+	refused := [][]string{
+		{"--dry-run", "gmail", "batch", "modify", "m1", "--add", "TRASH"},
+		{"--dry-run", "gmail", "messages", "modify", "m1", "--add", "trash"},
+		{"--dry-run", "gmail", "thread", "modify", "t1", "--add", "SPAM"},
+		{"--dry-run", "gmail", "labels", "modify", "t1", "--add", "Work,TRASH"},
+		{"--dry-run", "gmail", "batch", "modify", "m1", "--add-label", "TRASH"},
+	}
+	for _, args := range refused {
+		err := Execute(args)
+		if err == nil || !strings.Contains(err.Error(), "baked safety profile") {
+			t.Errorf("expected label-trash refusal for %v, got %v", args, err)
+		}
+	}
+	_ = captureStdout(t, func() {
+		_ = captureStderr(t, func() {
+			if err := Execute([]string{"--dry-run", "gmail", "batch", "modify", "m1", "--add", "Work", "--remove", "INBOX"}); err != nil {
+				t.Errorf("ordinary label change refused: %v", err)
+			}
+		})
+	})
 }

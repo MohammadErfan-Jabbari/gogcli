@@ -1,11 +1,31 @@
 name: oikos
 description: >-
-  Everything except sending mail, deleting, changing sharing, and signing in.
-  Built for Erfan's Oikos bot on epix (MohammadErfan-Jabbari/oikos#23).
-  Calendar events with guests still notify the guests.
+  The eight Google apps Erfan uses, minus sending mail or messages, deleting,
+  changing sharing, and signing in. Built for his Oikos bot on epix
+  (MohammadErfan-Jabbari/oikos#23). Calendar events with guests still notify
+  the guests, and Drive moves, copies, and uploads into a shared folder are
+  visible to that folder's members.
+
+# Everything not listed here is blocked, including root shortcuts such as
+# `send`, `login`, and `logout`, and services Oikos does not use.
+allow:
+  - gmail
+  - calendar
+  - drive
+  - docs
+  - sheets
+  - slides
+  - contacts
+  - tasks
+  - auth.list
+  - auth.status
+  - auth.doctor
+  - auth.services
+  - schema
+  - version
 
 deny:
-  # Sending mail or messages, now or later.
+  # Sending mail or messages, now or later. Comments email the people on a file.
   - gmail.send
   - gmail.reply
   - gmail.reply-all
@@ -20,10 +40,21 @@ deny:
   - gmail.settings.sendas.create
   - gmail.settings.sendas.update
   - gmail.settings.sendas.verify
-  - chat.dm.send
-  - chat.messages.send
+  - calendar.out-of-office
+  - calendar.focus-time
+  - calendar.propose-time
+  - drive.comments.create
+  - drive.comments.update
+  - drive.comments.reply
+  - drive.comments.resolve
+  - drive.comments.reopen
+  - docs.comments.add
+  - docs.comments.reply
+  - docs.comments.resolve
+  - docs.comments.reopen
 
-  # Deleting.
+  # Deleting. Adding the TRASH or SPAM label is refused in code while
+  # gmail.trash is denied.
   - gmail.trash
   - gmail.batch.delete
   - gmail.drafts.delete
@@ -47,9 +78,6 @@ deny:
   - slides.delete-slide
   - tasks.delete
   - tasks.clear
-  - forms.delete-question
-  - forms.questions.delete
-  - chat.messages.reactions.delete
 
   # Sharing, or sending data to another server.
   - drive.share
@@ -57,35 +85,12 @@ deny:
   - drive.bulk.remove-public
   - drive.bulk.update-role
   - drive.changes.watch
-  - forms.publish
-  - forms.watch.create
+  - drive.changes.serve
   - gmail.settings.delegates.add
   - gmail.settings.delegates.remove
   - gmail.settings.watch.start
   - gmail.settings.watch.serve
-
-  # Signing in, tokens, and configuration.
-  - auth.add
-  - auth.remove
-  - auth.import
-  - auth.keep
-  - auth.keyring
-  - auth.manage
-  - auth.rekey
-  - auth.setup
-  - auth.alias.set
-  - auth.alias.unset
-  - auth.credentials.set
-  - auth.credentials.remove
-  - auth.service-account.set
-  - auth.service-account.unset
-  - auth.tokens.delete
-  - auth.tokens.export
-  - auth.tokens.import
-  - config.set
-  - config.unset
-  - config.no-send.set
-  - config.no-send.remove
+  - gmail.settings.watch.renew
 
 locked-flags:
   no-input: true
