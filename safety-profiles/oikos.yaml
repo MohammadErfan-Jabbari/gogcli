@@ -1,0 +1,92 @@
+name: oikos
+description: >-
+  Everything except sending mail, deleting, changing sharing, and signing in.
+  Built for Erfan's Oikos bot on epix (MohammadErfan-Jabbari/oikos#23).
+  Calendar events with guests still notify the guests.
+
+deny:
+  # Sending mail or messages, now or later.
+  - gmail.send
+  - gmail.reply
+  - gmail.reply-all
+  - gmail.forward
+  - gmail.autoreply
+  - gmail.drafts.send
+  - gmail.track
+  - gmail.settings.vacation.update
+  - gmail.settings.autoforward.update
+  - gmail.settings.forwarding.create
+  - gmail.settings.filters.create
+  - gmail.settings.sendas.create
+  - gmail.settings.sendas.update
+  - gmail.settings.sendas.verify
+  - chat.dm.send
+  - chat.messages.send
+
+  # Deleting.
+  - gmail.trash
+  - gmail.batch.delete
+  - gmail.drafts.delete
+  - gmail.labels.delete
+  - gmail.settings.filters.delete
+  - gmail.settings.forwarding.delete
+  - gmail.settings.sendas.delete
+  - calendar.delete
+  - calendar.delete-calendar
+  - contacts.delete
+  - contacts.batch.delete
+  - contacts.dedupe
+  - drive.delete
+  - drive.comments.delete
+  - docs.clear
+  - docs.delete-tab
+  - docs.tabs.delete
+  - docs.comments.delete
+  - sheets.clear
+  - sheets.delete-tab
+  - slides.delete-slide
+  - tasks.delete
+  - tasks.clear
+  - forms.delete-question
+  - forms.questions.delete
+  - chat.messages.reactions.delete
+
+  # Sharing, or sending data to another server.
+  - drive.share
+  - drive.unshare
+  - drive.bulk.remove-public
+  - drive.bulk.update-role
+  - drive.changes.watch
+  - forms.publish
+  - forms.watch.create
+  - gmail.settings.delegates.add
+  - gmail.settings.delegates.remove
+  - gmail.settings.watch.start
+  - gmail.settings.watch.serve
+
+  # Signing in, tokens, and configuration.
+  - auth.add
+  - auth.remove
+  - auth.import
+  - auth.keep
+  - auth.keyring
+  - auth.manage
+  - auth.rekey
+  - auth.setup
+  - auth.alias.set
+  - auth.alias.unset
+  - auth.credentials.set
+  - auth.credentials.remove
+  - auth.service-account.set
+  - auth.service-account.unset
+  - auth.tokens.delete
+  - auth.tokens.export
+  - auth.tokens.import
+  - config.set
+  - config.unset
+  - config.no-send.set
+  - config.no-send.remove
+
+locked-flags:
+  no-input: true
+  wrap-untrusted: true
